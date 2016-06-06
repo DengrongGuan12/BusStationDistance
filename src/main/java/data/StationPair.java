@@ -55,7 +55,7 @@ public class StationPair {
 
     public void convert(String line){
         length = GisUtil.calculateLength(line,start.getPoint(),end.getPoint());
-        System.out.println("pair: "+length);
+//        System.out.println("pair: "+length);
         lineString = GisUtil.getLineString(line,start.getPoint(),end.getPoint());
 
     }

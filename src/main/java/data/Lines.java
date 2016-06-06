@@ -1,15 +1,17 @@
 package data;
 
+import dataHana.BusLineStation;
+import db.HanaConnectionPool;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import util.HttpRequest;
 
 import java.io.*;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.*;
 
 /**
  * Created by I322233 on 6/1/2016.
@@ -18,6 +20,96 @@ public class Lines {
     private static String url = "http://ditu.amap.com/service/poiInfo";
     private ArrayList<String> lineNames = new ArrayList<String>();
     private ArrayList<Line> lines = new ArrayList<Line>();
+
+    public void matchLineData(Map<String,Map<String, dataHana.Line>> hanaLines){
+        List<Line> noMatchedGaodeLines = new ArrayList<Line>();
+        List<dataHana.Line> findedLines = new ArrayList<dataHana.Line>();
+//        System.out.println("根据名称寻找匹配....");
+        for (Line line:lines
+             ) {
+            Station gaodeStart = line.getStartStation();
+            Station gaodeEnd = line.getEndStation();
+            String name = line.getName();
+            String[] names = name.split("\\(");
+            Map<String, dataHana.Line> map = hanaLines.get(names[0]);
+            if(map == null){
+//                System.out.println("高德道路 "+name+" 根据名称未找到匹配!");
+                noMatchedGaodeLines.add(line);
+            }else{
+                for (String serviceId: map.keySet()
+                     ) {
+                    dataHana.Line hanaLine = map.get(serviceId);
+                    Station hanaStart = hanaLine.getStartStation();
+                    Station hanaEnd = hanaLine.getEndStation();
+                    if(hanaStart.getName().equals(gaodeStart.getName()) || hanaEnd.getName().equals(gaodeEnd.getName())){
+//                        System.out.println("高德道路 "+name+" 根据名称找到匹配: serviceId 为 "+serviceId+" ; lineCode 为 "+hanaLine.getLineCode());
+                        //删除匹配成功的
+                        System.out.println(line.getId()+";"+hanaLine.getLineCode()+";"+hanaLine.getServiceId());
+                        map.remove(serviceId);
+                        if(map.keySet().size() == 0){
+                            hanaLines.remove(names[0]);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+//        System.out.println("---------------------------------------------------根据起点终点寻找匹配....----------------------------------------------");
+        List<Map<String,List<dataHana.Line>>> list = BusLineStation.genStationNameLines(hanaLines);
+        Map<String,List<dataHana.Line>> startNames = list.get(0);
+        Map<String,List<dataHana.Line>> endNames = list.get(1);
+        int num = 0;
+        for (Line line:noMatchedGaodeLines
+             ) {
+            String name = line.getName();
+            String startName = "";
+            String endName = "";
+            startName = line.getStartStation().getName();
+            endName = line.getEndStation().getName();
+//            System.out.println("查找: "+name+" "+startName+"--"+endName);
+
+            List<dataHana.Line> lines = startNames.get(startName);
+            if (lines != null){
+                boolean findMatch = false;
+                for (dataHana.Line hanaLine:lines
+                     ) {
+//                    System.out.println("根据起点找到 "+hanaLine.getLineName()+" 终点为: "+hanaLine.getEndStation().getName());
+                    if (hanaLine.getEndStation().getName().equals(endName) || hanaLine.getEndStation().getName().equals(endName+"1")){
+//                        System.out.println("高德道路 "+line.getName()+" 根据起点找到匹配: serviceId 为 "+hanaLine.getServiceId()+" ; lineCode 为 "+hanaLine.getLineCode());
+                        findMatch = true;
+                        System.out.println(line.getId()+";"+hanaLine.getLineCode()+";"+hanaLine.getServiceId());
+                        break;
+                    }
+                }
+                if(findMatch){
+                    continue;
+                }
+            }
+            List<dataHana.Line> endLines = endNames.get(endName);
+            if(endLines != null){
+                boolean findMatch = false;
+                for (dataHana.Line hanaLine:endLines
+                        ) {
+//                    System.out.println("根据终点找到 "+hanaLine.getLineName()+" 终点为: "+hanaLine.getEndStation().getName());
+                    if (hanaLine.getStartStation().getName().equals(startName) || hanaLine.getStartStation().getName().equals(startName+"1")){
+//                        System.out.println("高德道路 "+line.getName()+" 根据终点找到匹配: serviceId 为 "+hanaLine.getServiceId()+" ; lineCode 为 "+hanaLine.getLineCode());
+                        findMatch = true;
+                        System.out.println(line.getId()+";"+hanaLine.getLineCode()+";"+hanaLine.getServiceId());
+                        break;
+                    }
+                }
+                if(findMatch){
+                    continue;
+                }
+            }
+            num++;
+//            System.out.println("高德道路 "+line.getName()+" 根据起点终点未找到匹配!");
+        }
+//        System.out.println("高德总线路数: "+lines.size());
+//        System.out.println("未在hana 中找到匹配的数量: "+num);
+
+    }
+
     public void parseLineJson(JSONObject busData){
         for (String lineId:busData.keySet()
                 ) {
@@ -66,6 +158,7 @@ public class Lines {
         }
     }
     public void convertPairs(){
+        System.out.println("pair 转换...");
         for (Line line:lines
              ) {
             line.convertPairs();
@@ -114,6 +207,7 @@ public class Lines {
     }
 
     public void loadBusDataFromJson(){
+        System.out.println("从json文件加载数据...");
         String fullFileName = "src/main/resources/busLineAmap1234.json";
 
         File file = new File(fullFileName);
@@ -232,6 +326,41 @@ public class Lines {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void writeToHana(Mapping map){
+        System.out.println("向hana 导入数据...");
+        String table  = "BUS_LINE_STATION_DISTANCE";
+        String schema = "SAP_TRAFFIC_DATA";
+        Connection connection = null;
+        try {
+            connection = HanaConnectionPool.getInstance().getConnection();
+            String sql = "INSERT INTO \""+schema+"\".\""+table+"\" VALUES(?,?,?,?,?,?)";
+            PreparedStatement preparedStatement = connection.prepareStatement(sql);
+            for (Line line:lines
+                    ) {
+                String lineId = line.getId();
+                dataHana.Line hanaLine = map.getLine(lineId);
+                if(hanaLine == null){
+                    continue;
+                }
+                String lineCode = hanaLine.getLineCode();
+                String serviceId = hanaLine.getServiceId();
+                for(StationPair pair:line.getPairs()){
+                    preparedStatement.setString(1,lineCode);
+                    preparedStatement.setString(2,serviceId);
+                    preparedStatement.setString(3,pair.getStart().getSequence());
+                    preparedStatement.setString(4,pair.getEnd().getSequence());
+                    preparedStatement.setDouble(5,pair.getLength());
+                    preparedStatement.setString(6,pair.getLineString());
+                    preparedStatement.execute();
+                }
+            }
+            HanaConnectionPool.getInstance().closeConnection(connection);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
     }
 
 

@@ -15,6 +15,25 @@ import java.util.Map;
  * Created by I322233 on 6/1/2016.
  */
 public class Line {
+    private String lineCode = "";
+
+    public String getLineCode() {
+        return lineCode;
+    }
+
+    public void setLineCode(String lineCode) {
+        this.lineCode = lineCode;
+    }
+
+    public String getServiceId() {
+        return serviceId;
+    }
+
+    public void setServiceId(String serviceId) {
+        this.serviceId = serviceId;
+    }
+
+    private String serviceId = "";
     public ArrayList<Station> getStations() {
         return stations;
     }
@@ -92,12 +111,19 @@ public class Line {
             pair.convert(lineString);
             totalLength+=pair.getLength();
         }
-        System.out.println("totalLength: "+totalLength);
+//        System.out.println("totalLength: "+totalLength);
     }
     public void calculateTotalLength(){
         Station start = stations.get(0);
         Station end = stations.get(stations.size()-1);
-        System.out.println("totalLength: "+ GisUtil.calculateLength(lineString,start.getPoint(),end.getPoint()));
+//        System.out.println("totalLength: "+ GisUtil.calculateLength(lineString,start.getPoint(),end.getPoint()));
+    }
+
+    public Station getStartStation(){
+        return stations.get(0);
+    }
+    public Station getEndStation(){
+        return stations.get(stations.size()-1);
     }
 
 
