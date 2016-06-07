@@ -11,6 +11,7 @@ import java.net.URLEncoder;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.*;
 
 /**
@@ -335,6 +336,10 @@ public class Lines {
         Connection connection = null;
         try {
             connection = HanaConnectionPool.getInstance().getConnection();
+            String truncateSql = "truncate table \""+schema+"\".\""+table+"\"";
+            Statement statement = connection.createStatement();
+            statement.execute(truncateSql);
+            statement.close();
             String sql = "INSERT INTO \""+schema+"\".\""+table+"\" VALUES(?,?,?,?,?,?)";
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
             for (Line line:lines
