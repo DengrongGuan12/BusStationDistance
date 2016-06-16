@@ -28,7 +28,7 @@ public class Main {
         lines.convertPairs();
         BusLineStation busLineStation = new BusLineStation();
         busLineStation.readData();
-        lines.matchLineData(busLineStation.getNameLines());
+//        lines.matchLineData(busLineStation.getNameLines());
 
         Mapping mapping = new Mapping();
         mapping.loadMapData("map.csv",";",true);

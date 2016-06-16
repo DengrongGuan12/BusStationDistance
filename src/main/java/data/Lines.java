@@ -237,7 +237,7 @@ public class Lines {
             JSONObject busData = jsonArray.getJSONObject(j);
             Line line = new Line();
             line.setId(busData.optString("id"));
-
+            System.out.println("line_id:"+line.getId());
             JSONArray stopList = busData.optJSONArray("via_stops");
             for(int i = 0;i<stopList.length();i++){
                 JSONObject stationJson = stopList.getJSONObject(i);
