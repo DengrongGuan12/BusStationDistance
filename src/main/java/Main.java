@@ -24,7 +24,7 @@ public class Main {
 
         Lines lines = new Lines();
 //        lines.readNameFromFile();
-        lines.loadBusDataFromJson();
+        lines.loadBusDataFromJson("busLineAmap1234.json");
         lines.convertPairs();
         BusLineStation busLineStation = new BusLineStation();
         busLineStation.readData();
@@ -32,7 +32,7 @@ public class Main {
 
         Mapping mapping = new Mapping();
         mapping.loadMapData("map.csv",";",true);
-        lines.writeToHana(mapping);
+        lines.writeToHana(mapping,"BUS_LINE_STATION_DISTANCE","SAP_TRAFFIC_DATA");
 
 //
 //        lines.writeToCsv();

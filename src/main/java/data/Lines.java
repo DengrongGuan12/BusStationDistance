@@ -207,9 +207,9 @@ public class Lines {
 //        parseLineJson(busData);
     }
 
-    public void loadBusDataFromJson(){
+    public void loadBusDataFromJson(String filename){
         System.out.println("从json文件加载数据...");
-        String fullFileName = "src/main/resources/busLineAmap1234.json";
+        String fullFileName = "src/main/resources/"+filename;
 
         File file = new File(fullFileName);
         Scanner scanner = null;
@@ -329,10 +329,8 @@ public class Lines {
         }
     }
 
-    public void writeToHana(Mapping map){
+    public void writeToHana(Mapping map,String table,String schema){
         System.out.println("向hana 导入数据...");
-        String table  = "BUS_LINE_STATION_DISTANCE";
-        String schema = "SAP_TRAFFIC_DATA";
         Connection connection = null;
         try {
             connection = HanaConnectionPool.getInstance().getConnection();
